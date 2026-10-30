@@ -1,5 +1,7 @@
 using UnityEngine;
 using DG.Tweening;
+using System.Collections.Generic;
+using Unity.VisualScripting;
 
 public class Hook : MonoBehaviour
 {
@@ -13,12 +15,15 @@ public class Hook : MonoBehaviour
     private int fishCount;
 
     private bool canMove = true;
+    private List<Fish> hookedFishes;
+
     private Tweener cameraTween;
 
     private void Awake()
     {
         mainCamera = Camera.main;
         coll = GetComponent<Collider2D>();
+        hookedFishes = new List<Fish>();
     }
 
     private void Update()
@@ -54,6 +59,7 @@ public class Hook : MonoBehaviour
         });
         coll.enabled = false;
         canMove = true;
+        hookedFishes.Clear();
     }
 
     private void StopFishing()
@@ -72,6 +78,41 @@ public class Hook : MonoBehaviour
             transform.position = Vector2.down * 6;
             coll.enabled = true;
             int num = 0;
+
+            for (int i = 0; i < hookedFishes.Count; i++)
+            {
+                hookedFishes[i].transform.SetParent(null);
+                hookedFishes[i].ResetFish();
+                num += hookedFishes[i].Type.price;
+            }
         });
     }
+
+    private void OnTriggerEnter2D(Collider2D target)
+    {
+        if(target.CompareTag("Fish") && fishCount != strength)
+        {
+            fishCount++;
+            Fish component = target.GetComponent<Fish>();
+            component.Hooked();
+            hookedFishes.Add(component);
+
+            target.transform.SetParent(transform);
+            target.transform.position = hookedTransform.position;
+            target.transform.rotation = hookedTransform.rotation;
+            target.transform.localScale = Vector3.one;
+
+            target.transform.DOShakeRotation(5, Vector3.forward * 45, 10, 90, false).
+                SetLoops(1, LoopType.Yoyo).OnComplete(delegate
+                {
+                    target.transform.rotation = Quaternion.identity; 
+                });
+            
+            if(fishCount == strength)
+            {
+                StopFishing();
+            } 
+        }
+    }
+
 }
